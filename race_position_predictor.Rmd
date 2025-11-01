@@ -448,7 +448,94 @@ data_features %>%
   labs(x = "Qualification Position", y = "Race Position") +
   theme_vaw_light()
 
-# 
+# Grid Position
+data_features %>% 
+  count(grid_position, race_position) %>% 
+  group_by(grid_position) %>% 
+  mutate(r = n/sum(n)) %>% 
+  ggplot() +
+  geom_tile(mapping = aes(x = grid_position, y = race_position, fill = r),
+            colour = "white", linewidth = 1) +
+  geom_text(mapping = aes(x = grid_position, y = race_position, 
+                          label = percent(x = r, accuracy = 1)),
+            font = "Titillium Web", colour = "white", size = 5) +
+  scale_fill_viridis_b(trans = "log10", guide = FALSE) +
+  labs(x = "Grid Position", y = "Race Position") +
+  theme_vaw_light()
+
+# Age
+data_features %>% 
+  mutate(age_driver = cut_interval(x = age_driver, length = 2)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = age_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Age Bucket", y = "Race Position") +
+  theme_vaw_light()
+
+# Races Featured Driver
+data_features %>% 
+  mutate(race_position = factor(race_position, levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = race_position, y = races_driver),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Race Position", y = "Races Driver") +
+  theme_vaw_light()
+
+data_features %>% 
+  mutate(races_driver = cut_interval(x = races_driver, length = 50)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = races_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Races Driver", y = "Race Position") +
+  theme_vaw_light()
+
+# Points Share
+data_features %>% 
+  mutate(ratio_points_driver = cut_interval(x = ratio_points_driver, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_points_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Points Won %age", y = "Race Position") +
+  theme_vaw_light()
+
+# Race win Ratio
+data_features %>% 
+  mutate(ratio_race_wins_driver = cut_interval(x = wins_driver/races_driver, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_race_wins_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Races Won %age", y = "Race Position") +
+  theme_vaw_light()
+
+# Podium Win Ratio
+data_features %>% 
+  mutate(ratio_race_podiums_driver = cut_interval(x = podiums_driver/races_driver, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_race_podiums_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Podiums Achieved %age", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean race position Driver
+data_features %>% 
+  mutate(position_mean_driver = factor(round(position_mean_driver), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = position_mean_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Race Position", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Grid Position Driver
+data_features %>% 
+  mutate(grid_mean_driver = factor(round(grid_mean_driver), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = grid_mean_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Grid Position", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean DNFs
+
 ```
 
 ## Feature Engineering
