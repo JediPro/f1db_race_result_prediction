@@ -54,11 +54,11 @@ table_race_qualifying <- read_csv(file = unzip(
 # List of race results
 table_race_results <- read_csv(file = unzip(
   zipfile = "f1db-csv.zip", files = "f1db-races-race-results.csv"), guess_max = 1e+4)
-
 ```
 
 ## Process
 ```{r Process}
+t0 <- Sys.time()
 # Consolidated data -------------------
 data_proc <- table_races %>% 
   rename(raceId = id) %>% 
@@ -132,7 +132,6 @@ data_proc <- table_races %>%
          constructor_country = constructorCountryId)
 
 # Create predictors -------------------------------
-t0 <- Sys.time()
 data_features <- data_proc %>%
   # filter(race_id %in% c(1142, 1143, 1144)) %>% 
   # Code race types
@@ -153,7 +152,8 @@ data_features <- data_proc %>%
   select(-n_driver_constr) %>%
   # Older races had positions greater than 30, capping to 20
   mutate(race_position = case_when(race_position > 20 ~ 20, TRUE ~ race_position),
-         grid_position = case_when(grid_position > 20 ~ 20, TRUE ~ grid_position)) %>% 
+         grid_position = case_when(grid_position > 20 ~ 20, TRUE ~ grid_position),
+         quali_position = case_when(quali_position > 20 ~ 20, TRUE ~ quali_position)) %>% 
   # Driver features ---------------------------------------------------------
   group_by(driver_id) %>% 
   # Age
@@ -428,7 +428,31 @@ data_features <- data_proc %>%
          matches(match = "_driver_circuit$"), 
          matches(match = "_constructor_circuit$"))
 difftime(time1 = Sys.time(), time2 = t0)
+```
 
+## Explore
+```{r EDA}
+# Relations of most variables to race position
+# Qualification Position -----------------------------------------------
+data_features %>% 
+  count(quali_position, race_position) %>% 
+  group_by(quali_position) %>% 
+  mutate(r = n/sum(n)) %>% 
+  ggplot() +
+  geom_tile(mapping = aes(x = quali_position, y = race_position, fill = r),
+            colour = "white", linewidth = 1) +
+  geom_text(mapping = aes(x = quali_position, y = race_position, 
+                          label = percent(x = r, accuracy = 1)),
+            font = "Titillium Web", colour = "white", size = 5) +
+  scale_fill_viridis_b(trans = "log10", guide = FALSE) +
+  labs(x = "Qualification Position", y = "Race Position") +
+  theme_vaw_light()
+
+# 
+```
+
+## Feature Engineering
+```{r Engineer Features}
 # Mould features -----------------------
 data_predictor <- data_features %>% 
   # Cap position order to 20
@@ -483,6 +507,7 @@ data_predictor <- data_features %>%
 arrow::write_parquet(x = data_predictor, sink = "data_predictor.parquet")
 ```
 
+
 ## Predict
 ```{r}
 # Read in data -------------------------
@@ -526,56 +551,3 @@ mtrc_cars(data = data_test_aug, truth = positionOrder, estimate = .pred)
 
 data_train_aug %>% ggplot() + geom_density_2d(mapping = aes(x = positionOrder, y = .pred))
 ```
-
-## Simulations
-```{r Championship probability}
-# Set env
-library(tidyverse)
-library(gtools)
-
-# Set points master table ----------------------------------
-table_points <- bind_rows(
-  tibble(event_type = "race", posn = 1:20, points = c(25, 18, 15, 12, 10, 8, 6, 4, 2, 1,
-                                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
-  tibble(event_type = "sprint", posn = 1:20, points = c(8, 7, 6, 5, 4, 3, 2, 1, 0, 0,
-                                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-)
-
-# Create table of all possible finishing orders ---------------------
-table_finish <- expand_grid(`81` = 1:20, `4` = 1:20, `1` = 1:20) %>% 
-  # Provide index
-  mutate(seq_id = row_number()) %>% 
-  # long form
-  pivot_longer(-c(seq_id), names_to = "driver", values_to = "posn") %>% 
-  # Count distinct numbers for each seq id
-  group_by(seq_id) %>% 
-  mutate(n_unique = n_distinct(posn)) %>% 
-  ungroup() %>% 
-  # Only keep sequences which have distinct positions for each driver
-  filter(n_unique == max(n_unique)) %>% 
-  # New sequence ids
-  mutate(seq_id = dense_rank(x = seq_id)) %>% 
-  select(-n_unique)
-
-# Create table of all possible sequences of finishes for 7 events ------------------
-table_sequence
-
-# Table of current standings -----------------------
-data_standings <- tibble(driver = c("81", "4", "1"), start_points = c(346, 332, 306)) %>% 
-  # Rows for each event
-  mutate(event_dat = list(tibble(event_seq = c(1, 2, 3, 4, 5, 6, 7),
-                                 event_name = c("mexico", "brazil", "brazil", 
-                                                "las_vegas", "qatar", "qatar", "abu_dhabi"),
-                                 event_type = c("race", "sprint", "race", "race",
-                                                "sprint", "race", "race")))) %>% 
-  unnest(cols = event_dat) %>% 
-  # Create all possible position combinations
-  left_join(y = ,
-            by = c("driver"), relationship = "many-to-many") %>% 
-  # Fetch points
-  left_join(y = table_points, by = c("event_type", "posn")) %>% 
-  filter(event_seq == 2 & seq_id == 1)
-
-
-```
-
