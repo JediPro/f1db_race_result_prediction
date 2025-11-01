@@ -1,0 +1,581 @@
+---
+title: "Race Position Predictor"
+author: "JediPro"
+date: "04/01/2025"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = F, warning = F, fig.width = 12, fig.width = 12,
+                      echo = T, eval = T)
+options(warn = 1)
+```
+
+## Set environment
+```{r Set Environs}
+# Load libraries
+library(tidyverse)
+library(ggforce)
+library(slider)
+library(GGally)
+library(tidymodels)
+
+# Set working directory
+setwd("C:\\Stuff\\Datasets\\formula_one\\f1_data\\race_position_predictor\\")
+
+# Load themes script
+source(file = "C:\\Stuff\\Datasets\\vaw_themes.R")
+```
+
+## Load data
+```{r Load data}
+# Load data ---------------------
+# List of drivers
+table_drivers <- read_csv(file = unzip(
+  zipfile = "f1db-csv.zip", files = "f1db-drivers.csv"), guess_max = 1e+4)
+# List of constructors
+table_constructors <- read_csv(file = unzip(
+  zipfile = "f1db-csv.zip", files = "f1db-constructors.csv"), guess_max = 1e+4)
+# List of circuits
+table_circuits <- read_csv(file = unzip(
+  zipfile = "f1db-csv.zip", files = "f1db-circuits.csv"), guess_max = 1e+4)
+# List of races
+table_races <- read_csv(file = unzip(
+  zipfile = "f1db-csv.zip", files = "f1db-races.csv"), guess_max = 1e+4)
+# Sprint start grid
+table_sprint_qualifying <- read_csv(file = unzip(
+  zipfile = "f1db-csv.zip", files = "f1db-races-sprint-starting-grid-positions.csv"), guess_max = 1e+4)
+# List of sprint results
+table_sprint_results <- read_csv(file = unzip(
+  zipfile = "f1db-csv.zip", files = "f1db-races-sprint-race-results.csv"), guess_max = 1e+4)
+# Race start grid
+table_race_qualifying <- read_csv(file = unzip(
+  zipfile = "f1db-csv.zip", files = "f1db-races-starting-grid-positions.csv"), guess_max = 1e+4)
+# List of race results
+table_race_results <- read_csv(file = unzip(
+  zipfile = "f1db-csv.zip", files = "f1db-races-race-results.csv"), guess_max = 1e+4)
+
+```
+
+## Process
+```{r Process}
+# Consolidated data -------------------
+data_proc <- table_races %>% 
+  rename(raceId = id) %>% 
+  # filter(raceId == 1144) %>%
+  # Keep required columns
+  select(raceId, year, round, circuitId, date, circuitType) %>% 
+  # Get circuit info
+  left_join(y = table_circuits %>% 
+              select(id, countryId, latitude, longitude, length, turns) %>% 
+              rename(circuitCountryId = countryId),
+            by = c("circuitId" = "id")) %>% 
+  # Get results
+  left_join(y = bind_rows(table_sprint_results %>% 
+                            mutate(raceType = "SPRINT") %>% 
+                            select(raceId, raceType, driverId, constructorId,
+                                   qualificationPositionNumber, gridPositionNumber,
+                                   positionDisplayOrder, positionText, points,
+                                   laps, timeMillis),
+                          table_race_results %>% 
+                            mutate(raceType = "RACE") %>% 
+                            select(raceId, raceType, driverId, constructorId,
+                                   qualificationPositionNumber, gridPositionNumber,
+                                   positionDisplayOrder, positionText, points,
+                                   laps, timeMillis)),
+            by = c("raceId" = "raceId")) %>% 
+  # Get qualifying performance
+  left_join(y = bind_rows(table_sprint_qualifying %>% 
+                            mutate(raceType = "SPRINT") %>% 
+                            rename(qualifyingTimeMillis = timeMillis) %>% 
+                            select(raceId, raceType, driverId, qualifyingTimeMillis),
+                          table_race_qualifying %>% 
+                            mutate(raceType = "RACE") %>% 
+                            rename(qualifyingTimeMillis = timeMillis) %>% 
+                            select(raceId, raceType, driverId, qualifyingTimeMillis)),
+            by = c("raceId" = "raceId", "raceType" = "raceType", "driverId" = "driverId")) %>% 
+  # Get driver info
+  left_join(y = table_drivers %>% 
+              select(id, dateOfBirth, countryOfBirthCountryId, nationalityCountryId) %>% 
+              rename(driverBirthCountryId = countryOfBirthCountryId,
+                     driverNationalCountryId = nationalityCountryId), 
+            by = c("driverId" = "id")) %>% 
+  # Get constructor info
+  left_join(y = table_constructors %>% 
+              select(id, countryId) %>% 
+              rename(constructorCountryId = countryId), 
+            by = c("constructorId" = "id")) %>% 
+  # Some data errors present which create duplicates. Remove
+  distinct(raceId, raceType, driverId, .keep_all = TRUE) %>% 
+  # Rename columns
+  rename(race_id = raceId, 
+         circuit_id = circuitId, 
+         circuit_type = circuitType, 
+         circuit_country = circuitCountryId, 
+         circuit_lat = latitude, circuit_lon = longitude, 
+         circuit_length = length, 
+         circuit_turns = turns, 
+         race_type = raceType,
+         driver_id = driverId, 
+         constructor_id = constructorId,
+         quali_position = qualificationPositionNumber,
+         grid_position = gridPositionNumber,
+         race_position = positionDisplayOrder,
+         race_position_text = positionText,
+         points = points,
+         laps = laps,
+         race_time = timeMillis,
+         quali_time= qualifyingTimeMillis,
+         driver_dob = dateOfBirth,
+         driver_birth_country = driverBirthCountryId, 
+         driver_flag_country = driverNationalCountryId,
+         constructor_country = constructorCountryId)
+
+# Create predictors -------------------------------
+t0 <- Sys.time()
+data_features <- data_proc %>%
+  # filter(race_id %in% c(1142, 1143, 1144)) %>% 
+  # Code race types
+  mutate(race_type = factor(x = race_type, levels = c("RACE", "SPRINT"))) %>% 
+  # arrange in order
+  arrange(race_id, desc(race_type), race_position) %>% 
+  # Count number of drivers per constructor entered in race
+  group_by(race_id, race_type, constructor_id) %>% 
+  mutate(n_driver_constr = n_distinct(driver_id),
+         constr_driver_index = dense_rank(race_position)) %>% 
+  ungroup() %>% 
+  # Total points available per race
+  group_by(race_id, race_type) %>% 
+  mutate(race_points_avl_driver = sum(points[race_position == 1], na.rm = TRUE),
+         race_points_avl_constructor = sum(points[race_position <= n_driver_constr], na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # Remove helper column
+  select(-n_driver_constr) %>%
+  # Older races had positions greater than 30, capping to 20
+  mutate(race_position = case_when(race_position > 20 ~ 20, TRUE ~ race_position),
+         grid_position = case_when(grid_position > 20 ~ 20, TRUE ~ grid_position)) %>% 
+  # Driver features ---------------------------------------------------------
+  group_by(driver_id) %>% 
+  # Age
+  mutate(age_driver = interval(start = driver_dob, end = date)/years(1),
+         # Total races by driver
+         races_driver = slide_int(.x = race_id, .f = length, 
+                                  .before = Inf, .after = -1),
+         # Cumulative points by driver
+         points_driver = slide_dbl(.x = points, .f = ~sum(.x, na.rm = TRUE), 
+                                   .before = Inf, .after = -1),
+         # Cumulative points available
+         points_avl_driver = slide_dbl(.x = race_points_avl_driver, 
+                                       .f = ~sum(.x, na.rm = TRUE), 
+                                       .before = Inf, .after = -1),
+         # Ratio Points available
+         ratio_points_driver = points_driver/points_avl_driver,
+         # Cumulative wins
+         wins_driver = slide_dbl(.x = case_when(race_position == 1 ~ 1, TRUE ~ 0),
+                                 .f = ~sum(.x, na.rm = TRUE), 
+                                 .before = Inf, .after = -1),
+         # Cumulative podiums
+         podiums_driver = slide_dbl(.x = case_when(race_position <= 3 ~ 1, TRUE ~ 0),
+                                    .f = ~sum(.x, na.rm = TRUE), 
+                                    .before = Inf, .after = -1),
+         # Cumulative average position
+         position_mean_driver = slide_dbl(.x = race_position, 
+                                         .f = ~mean(.x, na.rm = TRUE), 
+                                         .before = Inf, .after = -1),
+         # Cumulative Average grid position
+         grid_mean_driver = slide_dbl(.x = grid_position, 
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                     .before = Inf, .after = -1),
+         #  Percentage of DNFs
+         dnf_mean_driver = slide_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                    .before = Inf, .after = -1),
+         # Last 5 races
+         # Cumulative points by driver in last N races
+         points_l5_driver = slide_dbl(.x = points, .f = ~sum(.x, na.rm = TRUE), 
+                                   .before = 5, .after = -1, .complete = FALSE),
+         # Cumulative points available
+         points_avl_l5_driver = slide_dbl(.x = race_points_avl_driver, 
+                                       .f = ~sum(.x, na.rm = TRUE), 
+                                       .before = 5, .after = -1, .complete = FALSE),
+         # Ratio Points available
+         ratio_points_l5_driver = points_l5_driver/points_avl_l5_driver,
+         # Average race position
+         position_l5_driver = slide_dbl(.x = race_position, 
+                                         .f = ~mean(.x, na.rm = TRUE), 
+                                         .before = 5, .after = -1, .complete = FALSE),
+         # Average grid position
+         grid_l5_driver = slide_dbl(.x = grid_position, 
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                     .before = 5, .after = -1, .complete = FALSE),
+         # DNF counts
+         dnf_l5_driver = slide_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+                                    .f = ~sum(.x, na.rm = TRUE), 
+                                    .before = 5, .after = -1,  .complete = FALSE),
+         ) %>% 
+  ungroup() %>% 
+  # Constructor features ------------------------------------------------------
+  group_by(constructor_id) %>% 
+  # Races
+  mutate(races_constructor = dense_rank(race_id + case_when(race_type == "SPRINT" ~ -0.5, TRUE ~ 0)),
+         # Cumulative points by driver
+         points_constructor = slide_index_dbl(.x = points, 
+                                              .i = races_constructor,
+                                              .f = ~sum(.x, na.rm = TRUE), 
+                                              .before = Inf, .after = -1),
+         # Cumulative points available
+         points_avl_constructor = slide_index_dbl(.x = case_when(constr_driver_index == 1 ~ race_points_avl_constructor, TRUE ~ 0), 
+                                                  .i = races_constructor,
+                                       .f = ~sum(.x, na.rm = TRUE), 
+                                       .before = Inf, .after = -1),
+         # Ratio Points available
+         ratio_points_constructor = points_constructor/points_avl_constructor,
+         # Cumulative wins
+         wins_constructor = slide_index_dbl(.x = case_when(race_position == 1 ~ 1, TRUE ~ 0),
+                                            .i = races_constructor,
+                                 .f = ~sum(.x, na.rm = TRUE), 
+                                 .before = Inf, .after = -1),
+         # Cumulative podiums
+         podiums_constructor = slide_index_dbl(.x = case_when(race_position <= 3 ~ 1, TRUE ~ 0),
+                                               .i = races_constructor,
+                                    .f = ~sum(.x, na.rm = TRUE), 
+                                    .before = Inf, .after = -1),
+         # Cumulative average position
+         position_mean_constructor = slide_index_dbl(.x = race_position, 
+                                               .i = races_constructor,
+                                         .f = ~mean(.x, na.rm = TRUE), 
+                                         .before = Inf, .after = -1),
+         # Cumulative Average grid position
+         grid_mean_constructor = slide_index_dbl(.x = grid_position, 
+                                           .i = races_constructor,
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                     .before = Inf, .after = -1),
+         #  Cumulative DNF in last 10 races
+         dnf_mean_constructor = slide_index_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+                                                .i = races_constructor,
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                    .before = Inf, .after = -1),
+         # Last 5 races
+         # Cumulative points by constructor in last N races
+         points_l5_constructor = slide_index_dbl(.x = points, 
+                                           .i = races_constructor,
+                                           .f = ~sum(.x, na.rm = TRUE), 
+                                   .before = 5, .after = -1, .complete = FALSE),
+         # Cumulative points available
+         points_avl_l5_constructor = slide_index_dbl(.x = case_when(constr_driver_index == 1 ~ race_points_avl_constructor, 
+                                                                    TRUE ~ 0),
+                                               .i = races_constructor,
+                                       .f = ~sum(.x, na.rm = TRUE), 
+                                       .before = 5, .after = -1, .complete = FALSE),
+         # Ratio Points available
+         ratio_points_l5_constructor = points_l5_constructor/points_avl_l5_constructor,
+         # Average race position
+         position_l5_constructor = slide_index_dbl(.x = race_position, 
+                                                    .i = races_constructor,
+                                                    .f = ~mean(.x, na.rm = TRUE), 
+                                                    .before = 5, .after = -1, .complete = FALSE),
+         # Average grid position
+         grid_l5_constructor = slide_index_dbl(.x = grid_position, 
+                                               .i = races_constructor,
+                                                .f = ~mean(.x, na.rm = TRUE), 
+                                                .before = 5, .after = -1, .complete = FALSE),
+         # DNF in last 10 races
+         dnf_l5_constructor = slide_index_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+                                               .i = races_constructor,
+                                               .f = ~sum(.x, na.rm = TRUE),
+                                               .before = 5, .after = -1,  .complete = FALSE),
+         ) %>% 
+  ungroup() %>% 
+  # Driver circuit features  --------------------------------------------------
+  group_by(driver_id, circuit_id) %>% 
+  # Races
+  mutate(races_driver_circuit = slide_int(.x = race_id, .f = length, 
+                                  .before = Inf, .after = -1),
+         # Cumulative points by driver
+         points_driver_circuit = slide_dbl(.x = points, .f = ~sum(.x, na.rm = TRUE), 
+                                   .before = Inf, .after = -1),
+         # Cumulative points available
+         points_avl_driver_circuit = slide_dbl(.x = race_points_avl_driver, 
+                                       .f = ~sum(.x, na.rm = TRUE), 
+                                       .before = Inf, .after = -1),
+         # Ratio POints available
+         ratio_points_driver_circuit = points_driver_circuit/points_avl_driver_circuit,
+         # Cumulative wins
+         wins_driver_circuit = slide_dbl(.x = case_when(race_position == 1 ~ 1, TRUE ~ 0),
+                                 .f = ~sum(.x, na.rm = TRUE), 
+                                 .before = Inf, .after = -1),
+         # Cumulative podiums
+         podiums_driver_circuit = slide_dbl(.x = case_when(race_position <= 3 ~ 1, TRUE ~ 0),
+                                    .f = ~sum(.x, na.rm = TRUE), 
+                                    .before = Inf, .after = -1),
+         # Cumulative average position
+         position_mean_driver_circuit = slide_dbl(.x = race_position, 
+                                         .f = ~mean(.x, na.rm = TRUE), 
+                                         .before = Inf, .after = -1, .complete = FALSE),
+         # Cumulative Average grid position
+         grid_mean_driver_circuit = slide_dbl(.x = grid_position, 
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                     .before = Inf, .after = -1, .complete = FALSE),
+         #  Cumulative DNF in last 10 races
+         dnf_mean_driver_circuit = slide_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                    .before = Inf, .after = -1,  .complete = FALSE),
+         # Last 5 races
+         # Cumulative points by driver in last N races at same circuit
+         points_l5_driver_circuit = slide_dbl(.x = points, 
+                                              .f = ~sum(.x, na.rm = TRUE), 
+                                   .before = 5, .after = -1, .complete = FALSE),
+         # Cumulative points available
+         points_avl_l5_driver_circuit = slide_dbl(.x = race_points_avl_driver, 
+                                       .f = ~sum(.x, na.rm = TRUE), 
+                                       .before = 5, .after = -1, .complete = FALSE),
+         # Ratio Points available
+         ratio_points_l5_driver_circuit = points_l5_driver_circuit/points_avl_l5_driver_circuit,
+         # Average race position
+         position_l5_driver_circuit = slide_dbl(.x = race_position, 
+                                         .f = ~mean(.x, na.rm = TRUE), 
+                                         .before = 5, .after = -1, .complete = FALSE),
+         # Average grid position
+         grid_l5_driver_circuit = slide_dbl(.x = grid_position, .f = ~mean(.x, na.rm = TRUE), 
+                                     .before = 5, .after = -1, .complete = FALSE),
+         # DNF in last 10 races
+         dnf_l5_driver_circuit = slide_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+                                    .f = ~sum(.x, na.rm = TRUE), 
+                                    .before = 5, .after = -1,  .complete = FALSE),
+         ) %>% 
+  ungroup() %>% 
+  # Constructor circuit features  -----------------------------------------------------
+  group_by(constructor_id, circuit_id) %>% 
+  # Races
+  mutate(races_constructor_circuit = dense_rank(race_id + case_when(race_type == "SPRINT" ~ -0.5, TRUE ~ 0)),
+         # Cumulative points by driver
+         points_constructor_circuit = slide_index_dbl(.x = points, 
+                                              .i = races_constructor_circuit,
+                                              .f = ~sum(.x, na.rm = TRUE), 
+                                              .before = Inf, .after = -1),
+         # Cumulative points available
+         points_avl_constructor_circuit = slide_index_dbl(.x = case_when(constr_driver_index == 1 ~ race_points_avl_constructor, 
+                                                                         TRUE ~ 0), 
+                                                  .i = races_constructor,
+                                       .f = ~sum(.x, na.rm = TRUE), 
+                                       .before = Inf, .after = -1),
+         # Ratio Points available
+         ratio_points_constructor_circuit = points_constructor_circuit/points_avl_constructor_circuit,
+         # Cumulative wins
+         wins_constructor_circuit = slide_index_dbl(.x = case_when(race_position == 1 ~ 1, TRUE ~ 0),
+                                            .i = races_constructor,
+                                 .f = ~sum(.x, na.rm = TRUE), 
+                                 .before = Inf, .after = -1),
+         # Cumulative podiums
+         podiums_constructor_circuit = slide_index_dbl(.x = case_when(race_position <= 3 ~ 1, TRUE ~ 0),
+                                               .i = races_constructor,
+                                    .f = ~sum(.x, na.rm = TRUE), 
+                                    .before = Inf, .after = -1),
+         # Cumulative average position
+         position_mean_constructor_circuit = slide_index_dbl(.x = race_position, 
+                                               .i = races_constructor,
+                                         .f = ~mean(.x, na.rm = TRUE), 
+                                         .before = Inf, .after = -1),
+         # Cumulative Average grid position
+         grid_mean_constructor_circuit = slide_index_dbl(.x = grid_position, 
+                                           .i = races_constructor,
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                     .before = Inf, .after = -1),
+         #  Cumulative DNF in last 10 races
+         dnf_mean_constructor_circuit = slide_index_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+                                                .i = races_constructor,
+                                    .f = ~mean(.x, na.rm = TRUE), 
+                                    .before = Inf, .after = -1),
+         # Last 5 races
+         # Cumulative points by constructor in last N races
+         points_l5_constructor_circuit = slide_index_dbl(.x = points, 
+                                           .i = races_constructor,
+                                           .f = ~sum(.x, na.rm = TRUE), 
+                                   .before = 5, .after = -1, .complete = FALSE),
+         # Cumulative points available
+         points_avl_l5_constructor_circuit = slide_index_dbl(.x = case_when(constr_driver_index == 1 ~ race_points_avl_constructor, 
+                                                                            TRUE ~ 0),
+                                               .i = races_constructor,
+                                       .f = ~sum(.x, na.rm = TRUE), 
+                                       .before = 5, .after = -1, .complete = FALSE),
+         # Ratio Points available
+         ratio_points_l5_constructor_circuit = points_l5_constructor_circuit/points_avl_l5_constructor_circuit,
+         # Average race position
+         position_l5_constructor_circuit = slide_index_dbl(.x = race_position, 
+                                                    .i = races_constructor,
+                                                    .f = ~mean(.x, na.rm = TRUE), 
+                                                    .before = 5, .after = -1, .complete = FALSE),
+         # Average grid position
+         grid_l5_constructor_circuit = slide_index_dbl(.x = grid_position, 
+                                               .i = races_constructor,
+                                                .f = ~mean(.x, na.rm = TRUE), 
+                                                .before = 5, .after = -1, .complete = FALSE),
+         # DNF in last 10 races
+         dnf_l5_constructor_circuit = slide_index_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+                                               .i = races_constructor,
+                                               .f = ~sum(.x, na.rm = TRUE),
+                                               .before = 5, .after = -1,  .complete = FALSE),
+         ) %>% 
+  ungroup() %>% 
+  # Keep required columns ---------------------------------------------------
+  select(race_id, year, round, date, race_type, matches(match = "^circuit"),
+         driver_id, driver_dob, driver_birth_country, driver_flag_country,
+         constructor_id, constructor_country,
+         quali_position, quali_time, grid_position, 
+         race_position, race_time, laps, points,
+         matches(match = "_driver$"), 
+         matches(match = "_constructor$"),
+         matches(match = "_driver_circuit$"), 
+         matches(match = "_constructor_circuit$"))
+difftime(time1 = Sys.time(), time2 = t0)
+
+# Mould features -----------------------
+data_predictor <- data_features %>% 
+  # Cap position order to 20
+  mutate(positionOrder = case_when(positionOrder > 20 ~ 20, TRUE ~ positionOrder),
+         # Driver
+         # Normalize race counts
+         races_driver = log10(x = races_driver),
+         # Normalize points counts
+         points_driver = log10(x = points_driver + 1),
+         # Normalize points scored ratio
+         ratio_points_driver = log10(x = ratio_points_driver + 0.0001),
+         # Normalize wins
+         wins_driver = log10(x = wins_driver + 0.9),
+         # Normalize podiums
+         podiums_driver = log10(x = podiums_driver + 0.9),
+         # Constructor
+         # Normalize race counts
+         races_constructor = log10(x = races_constructor),
+         # Normalize points counts
+         points_constructor = log10(x = points_constructor + 1),
+         # Normalize points scored ratio
+         ratio_points_constructor = log10(x = ratio_points_constructor + 0.0001),
+         # Normalize wins
+         wins_constructor = log10(x = wins_constructor + 0.9),
+         # Normalize podiums
+         podiums_constructor = log10(x = podiums_constructor + 0.9),
+         # Cap Constructor DNFs
+         dnf_l5_constructor = case_when(dnf_l5_constructor > 10 ~ 10, TRUE ~ dnf_l5_constructor),
+         # Driver Circuit
+         # Normalize points
+         points_driver_circuit = log10(points_driver_circuit + 1),
+         # Normalize points scored ratio
+         ratio_points_driver_circuit = log10(x = ratio_points_driver_circuit + 0.0001),
+         # Normalize wins
+         wins_driver_circuit = log10(x = wins_driver_circuit + 0.9),
+         # Normalize podiums
+         podiums_driver_circuit = log10(x = podiums_driver_circuit + 0.9),
+         # Constructor Circuit
+         # Normalize points
+         points_constructor_circuit = log10(points_constructor_circuit + 1),
+         # Normalize points scored ratio
+         ratio_points_constructor_circuit = log10(x = ratio_points_constructor_circuit + 0.0001),
+         # Normalize wins
+         wins_constructor_circuit = log10(x = wins_constructor_circuit + 0.9),
+         # Normalize podiums
+         podiums_constructor_circuit = log10(x = podiums_constructor_circuit + 0.9),
+         ) %>% 
+  # Select columns
+  select(-c(position, age_driver, contains("points_avl_"), races_constructor, 
+            races_driver_circuit, races_constructor_circuit))
+
+arrow::write_parquet(x = data_predictor, sink = "data_predictor.parquet")
+```
+
+## Predict
+```{r}
+# Read in data -------------------------
+data_learn <- arrow::read_parquet(file = "data_predictor.parquet")
+
+# Split data ----------------------------
+set.seed(713)
+data_split <- data_learn %>% drop_na() %>% 
+  initial_split(prop = 0.7)
+data_train <- training(data_split)
+data_test <- testing(data_split)
+
+# Initialize linear regression engine --------------------------
+mod_lm <- linear_reg(mode = "regression", engine = "lm")
+
+# Create recipe and variable roles ------------------------------
+rec_learn <- recipe(formula = positionOrder ~ ., data = data_train) %>% 
+  update_role(raceId, date, circuitId, driverId, constructorId, new_role = "id") %>% 
+  # Create dummies
+  step_dummy(all_nominal_predictors())
+
+# Create a workflow ---------------------------
+wflow_learn <- workflow() %>% 
+  add_model(spec = mod_lm) %>% 
+  add_recipe(recipe = rec_learn)
+
+# Fit model -------------------------
+mod_lm_fit <- wflow_learn %>% fit(data = data_train)
+
+# Check summary of model ------------------------------
+mod_summary <- mod_lm_fit %>% extract_fit_parsnip() %>% tidy()
+
+# Augment train and test data ---------------------
+data_train_aug <- augment(x = mod_lm_fit, new_data = data_train)
+data_test_aug <- augment(x = mod_lm_fit, new_data = data_test)
+
+# Define metric set -------------------------
+mtrc_cars <- metric_set(rmse, mae, mape, mase, rsq_trad)
+mtrc_cars(data = data_train_aug, truth = positionOrder, estimate = .pred)
+mtrc_cars(data = data_test_aug, truth = positionOrder, estimate = .pred)
+
+data_train_aug %>% ggplot() + geom_density_2d(mapping = aes(x = positionOrder, y = .pred))
+```
+
+## Simulations
+```{r Championship probability}
+# Set env
+library(tidyverse)
+library(gtools)
+
+# Set points master table ----------------------------------
+table_points <- bind_rows(
+  tibble(event_type = "race", posn = 1:20, points = c(25, 18, 15, 12, 10, 8, 6, 4, 2, 1,
+                                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+  tibble(event_type = "sprint", posn = 1:20, points = c(8, 7, 6, 5, 4, 3, 2, 1, 0, 0,
+                                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+)
+
+# Create table of all possible finishing orders ---------------------
+table_finish <- expand_grid(`81` = 1:20, `4` = 1:20, `1` = 1:20) %>% 
+  # Provide index
+  mutate(seq_id = row_number()) %>% 
+  # long form
+  pivot_longer(-c(seq_id), names_to = "driver", values_to = "posn") %>% 
+  # Count distinct numbers for each seq id
+  group_by(seq_id) %>% 
+  mutate(n_unique = n_distinct(posn)) %>% 
+  ungroup() %>% 
+  # Only keep sequences which have distinct positions for each driver
+  filter(n_unique == max(n_unique)) %>% 
+  # New sequence ids
+  mutate(seq_id = dense_rank(x = seq_id)) %>% 
+  select(-n_unique)
+
+# Create table of all possible sequences of finishes for 7 events ------------------
+table_sequence
+
+# Table of current standings -----------------------
+data_standings <- tibble(driver = c("81", "4", "1"), start_points = c(346, 332, 306)) %>% 
+  # Rows for each event
+  mutate(event_dat = list(tibble(event_seq = c(1, 2, 3, 4, 5, 6, 7),
+                                 event_name = c("mexico", "brazil", "brazil", 
+                                                "las_vegas", "qatar", "qatar", "abu_dhabi"),
+                                 event_type = c("race", "sprint", "race", "race",
+                                                "sprint", "race", "race")))) %>% 
+  unnest(cols = event_dat) %>% 
+  # Create all possible position combinations
+  left_join(y = ,
+            by = c("driver"), relationship = "many-to-many") %>% 
+  # Fetch points
+  left_join(y = table_points, by = c("event_type", "posn")) %>% 
+  filter(event_seq == 2 & seq_id == 1)
+
+
+```
+
