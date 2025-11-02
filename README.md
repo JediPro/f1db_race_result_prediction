@@ -13,3 +13,14 @@ dnf_mean_driver
 ratio_points_l5_driver
 position_l5_driver
 grid_l5_driver
+races_constructor
+ratio_points_constructor
+ratio_wins_constructor
+ratio_podiums_constructor
+position_mean_constructor
+grid_mean_constructor
+dnf_mean_constructor
+ratio_points_l5_constructor
+position_l5_constructor
+grid_l5_constructor
+dnf_l5_constructor

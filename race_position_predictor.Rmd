@@ -580,6 +580,106 @@ data_features %>%
   theme_vaw_light()
 
 
+# Races Featured Constructor -----------------------------------------------
+data_features %>% 
+  mutate(races_constructor = cut_interval(x = races_constructor, length = 100)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = races_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Races Contructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Points Share Constructor -----------------------------------------------
+data_features %>% 
+  mutate(ratio_points_constructor = cut_interval(x = ratio_points_constructor, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_points_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Points Won %age Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Race win Ratio Constructor -----------------------------------------------
+data_features %>% 
+  mutate(ratio_race_wins_constructor = cut_interval(x = wins_constructor/races_constructor, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_race_wins_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Races Won %age Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Podium Win Ratio Constructor -----------------------------------------------
+data_features %>% 
+  mutate(ratio_race_podiums_constructor = cut_interval(x = podiums_constructor/races_constructor, length = 0.2)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_race_podiums_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Podiums Achieved %age Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean race position Constructor -----------------------------------------------
+data_features %>% 
+  mutate(position_mean_constructor = factor(round(position_mean_constructor), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = position_mean_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Race Position Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Grid Position Constructor ----------------------------------------------
+data_features %>% 
+  mutate(grid_mean_constructor = factor(round(grid_mean_constructor), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = grid_mean_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Grid Position Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean DNFs Constructor -----------------------------------------------------------
+data_features %>% 
+  mutate(dnf_mean_constructor = cut_interval(x = dnf_mean_constructor, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = dnf_mean_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "DNF %age Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Points Share Last 5 Constructor -----------------------------------------
+data_features %>% 
+  mutate(ratio_points_l5_constructor = cut_interval(x = ratio_points_l5_constructor, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_points_l5_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Points Won Last 5 %age Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Race Position Last 5 Constructor --------------------------------------
+data_features %>% 
+  mutate(position_l5_constructor = factor(round(position_l5_constructor), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = position_l5_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Race Position L5 Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Grid Position Last 5 Constructor --------------------------------------------
+data_features %>% 
+  mutate(grid_l5_constructor = factor(round(grid_l5_constructor), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = grid_l5_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Grid Position L5 Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+# Count DNF Last 5 Constructor ---------------------------------------------------
+data_features %>% 
+  mutate(dnf_l5_constructor = factor(round(dnf_l5_constructor), levels = 1:5)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = dnf_l5_constructor, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "DNFs L5 Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+
 ```
 
 ## Feature Engineering
