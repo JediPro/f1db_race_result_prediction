@@ -433,7 +433,16 @@ difftime(time1 = Sys.time(), time2 = t0)
 ## Explore
 ```{r EDA}
 # Relations of most variables to race position
-# Qualification Position -----------------------------------------------
+# Age Driver -----------------------------------------------
+data_features %>% 
+  mutate(age_driver = cut_interval(x = age_driver, length = 2)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = age_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Age Bucket", y = "Race Position") +
+  theme_vaw_light()
+
+# Qualification Position Driver -----------------------------------------------
 data_features %>% 
   count(quali_position, race_position) %>% 
   group_by(quali_position) %>% 
@@ -448,7 +457,7 @@ data_features %>%
   labs(x = "Qualification Position", y = "Race Position") +
   theme_vaw_light()
 
-# Grid Position -----------------------------------------------
+# Grid Position Driver -----------------------------------------------
 data_features %>% 
   count(grid_position, race_position) %>% 
   group_by(grid_position) %>% 
@@ -461,15 +470,6 @@ data_features %>%
             font = "Titillium Web", colour = "white", size = 5) +
   scale_fill_viridis_b(trans = "log10", guide = FALSE) +
   labs(x = "Grid Position", y = "Race Position") +
-  theme_vaw_light()
-
-# Age Driver -----------------------------------------------
-data_features %>% 
-  mutate(age_driver = cut_interval(x = age_driver, length = 2)) %>% 
-  ggplot() +
-  geom_violin(mapping = aes(x = age_driver, y = race_position),
-              draw_quantiles = c(0.25, 0.5, 0.75)) +
-  labs(x = "Age Bucket", y = "Race Position") +
   theme_vaw_light()
 
 # Races Featured Driver -----------------------------------------------
@@ -534,7 +534,7 @@ data_features %>%
   labs(x = "Mean Grid Position", y = "Race Position") +
   theme_vaw_light()
 
-# Mean DNFs -----------------------------------------------------------
+# Mean DNFs Driver -----------------------------------------------------------
 data_features %>% 
   mutate(dnf_mean_driver = cut_interval(x = dnf_mean_driver, length = 0.1)) %>% 
   ggplot() +
@@ -544,6 +544,41 @@ data_features %>%
   theme_vaw_light()
 
 # Points Share Last 5 Driver -----------------------------------------
+data_features %>% 
+  mutate(ratio_points_l5_driver = cut_interval(x = ratio_points_l5_driver, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_points_l5_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "Points Won Last 5 %age Driver", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Race Position Last 5 Driver --------------------------------------
+data_features %>% 
+  mutate(position_l5_driver = factor(round(position_l5_driver), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = position_l5_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Race Position L5 Driver", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Grid Position Last 5 Driver --------------------------------------------
+data_features %>% 
+  mutate(grid_l5_driver = factor(round(grid_l5_driver), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = grid_l5_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Grid Position L5 Driver", y = "Race Position") +
+  theme_vaw_light()
+
+# Count DNF Last 5 Driver ---------------------------------------------------
+data_features %>% 
+  mutate(dnf_l5_driver = factor(round(dnf_l5_driver), levels = 1:5)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = dnf_l5_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "DNFs L5 Driver", y = "Race Position") +
+  theme_vaw_light()
+
 
 ```
 
