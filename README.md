@@ -9,3 +9,5 @@ ratio_wins_driver
 ratio_podiums_driver
 position_mean_driver
 grid_mean_driver
+dnf_mean_driver
+

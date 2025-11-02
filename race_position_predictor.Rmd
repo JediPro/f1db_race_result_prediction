@@ -187,7 +187,7 @@ data_features <- data_proc %>%
                                     .f = ~mean(.x, na.rm = TRUE), 
                                      .before = Inf, .after = -1),
          #  Percentage of DNFs
-         dnf_mean_driver = slide_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+         dnf_mean_driver = slide_dbl(.x = case_when(is.na(as.integer(race_position_text)) ~ 1, TRUE ~ 0),
                                     .f = ~mean(.x, na.rm = TRUE), 
                                     .before = Inf, .after = -1),
          # Last 5 races
@@ -209,7 +209,7 @@ data_features <- data_proc %>%
                                     .f = ~mean(.x, na.rm = TRUE), 
                                      .before = 5, .after = -1, .complete = FALSE),
          # DNF counts
-         dnf_l5_driver = slide_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+         dnf_l5_driver = slide_dbl(.x = case_when(is.na(as.integer(race_position_text)) ~ 1, TRUE ~ 0),
                                     .f = ~sum(.x, na.rm = TRUE), 
                                     .before = 5, .after = -1,  .complete = FALSE),
          ) %>% 
@@ -251,7 +251,7 @@ data_features <- data_proc %>%
                                     .f = ~mean(.x, na.rm = TRUE), 
                                      .before = Inf, .after = -1),
          #  Cumulative DNF in last 10 races
-         dnf_mean_constructor = slide_index_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+         dnf_mean_constructor = slide_index_dbl(.x = case_when(is.na(as.integer(race_position_text)) ~ 1, TRUE ~ 0),
                                                 .i = races_constructor,
                                     .f = ~mean(.x, na.rm = TRUE), 
                                     .before = Inf, .after = -1),
@@ -280,7 +280,7 @@ data_features <- data_proc %>%
                                                 .f = ~mean(.x, na.rm = TRUE), 
                                                 .before = 5, .after = -1, .complete = FALSE),
          # DNF in last 10 races
-         dnf_l5_constructor = slide_index_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+         dnf_l5_constructor = slide_index_dbl(.x = case_when(is.na(as.integer(race_position_text)) ~ 1, TRUE ~ 0),
                                                .i = races_constructor,
                                                .f = ~sum(.x, na.rm = TRUE),
                                                .before = 5, .after = -1,  .complete = FALSE),
@@ -317,7 +317,7 @@ data_features <- data_proc %>%
                                     .f = ~mean(.x, na.rm = TRUE), 
                                      .before = Inf, .after = -1, .complete = FALSE),
          #  Cumulative DNF in last 10 races
-         dnf_mean_driver_circuit = slide_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+         dnf_mean_driver_circuit = slide_dbl(.x = case_when(is.na(as.integer(race_position_text)) ~ 1, TRUE ~ 0),
                                     .f = ~mean(.x, na.rm = TRUE), 
                                     .before = Inf, .after = -1,  .complete = FALSE),
          # Last 5 races
@@ -339,7 +339,7 @@ data_features <- data_proc %>%
          grid_l5_driver_circuit = slide_dbl(.x = grid_position, .f = ~mean(.x, na.rm = TRUE), 
                                      .before = 5, .after = -1, .complete = FALSE),
          # DNF in last 10 races
-         dnf_l5_driver_circuit = slide_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+         dnf_l5_driver_circuit = slide_dbl(.x = case_when(is.na(as.integer(race_position_text)) ~ 1, TRUE ~ 0),
                                     .f = ~sum(.x, na.rm = TRUE), 
                                     .before = 5, .after = -1,  .complete = FALSE),
          ) %>% 
@@ -382,7 +382,7 @@ data_features <- data_proc %>%
                                     .f = ~mean(.x, na.rm = TRUE), 
                                      .before = Inf, .after = -1),
          #  Cumulative DNF in last 10 races
-         dnf_mean_constructor_circuit = slide_index_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+         dnf_mean_constructor_circuit = slide_index_dbl(.x = case_when(is.na(as.integer(race_position_text)) ~ 1, TRUE ~ 0),
                                                 .i = races_constructor,
                                     .f = ~mean(.x, na.rm = TRUE), 
                                     .before = Inf, .after = -1),
@@ -411,7 +411,7 @@ data_features <- data_proc %>%
                                                 .f = ~mean(.x, na.rm = TRUE), 
                                                 .before = 5, .after = -1, .complete = FALSE),
          # DNF in last 10 races
-         dnf_l5_constructor_circuit = slide_index_dbl(.x = case_when(is.na(race_position) ~ 1, TRUE ~ 0),
+         dnf_l5_constructor_circuit = slide_index_dbl(.x = case_when(is.na(as.integer(race_position_text)) ~ 1, TRUE ~ 0),
                                                .i = races_constructor,
                                                .f = ~sum(.x, na.rm = TRUE),
                                                .before = 5, .after = -1,  .complete = FALSE),
@@ -448,7 +448,7 @@ data_features %>%
   labs(x = "Qualification Position", y = "Race Position") +
   theme_vaw_light()
 
-# Grid Position
+# Grid Position -----------------------------------------------
 data_features %>% 
   count(grid_position, race_position) %>% 
   group_by(grid_position) %>% 
@@ -463,7 +463,7 @@ data_features %>%
   labs(x = "Grid Position", y = "Race Position") +
   theme_vaw_light()
 
-# Age
+# Age Driver -----------------------------------------------
 data_features %>% 
   mutate(age_driver = cut_interval(x = age_driver, length = 2)) %>% 
   ggplot() +
@@ -472,7 +472,7 @@ data_features %>%
   labs(x = "Age Bucket", y = "Race Position") +
   theme_vaw_light()
 
-# Races Featured Driver
+# Races Featured Driver -----------------------------------------------
 data_features %>% 
   mutate(race_position = factor(race_position, levels = 1:20)) %>% 
   ggplot() +
@@ -489,7 +489,7 @@ data_features %>%
   labs(x = "Races Driver", y = "Race Position") +
   theme_vaw_light()
 
-# Points Share
+# Points Share Driver -----------------------------------------------
 data_features %>% 
   mutate(ratio_points_driver = cut_interval(x = ratio_points_driver, length = 0.1)) %>% 
   ggplot() +
@@ -498,7 +498,7 @@ data_features %>%
   labs(x = "Points Won %age", y = "Race Position") +
   theme_vaw_light()
 
-# Race win Ratio
+# Race win Ratio Driver -----------------------------------------------
 data_features %>% 
   mutate(ratio_race_wins_driver = cut_interval(x = wins_driver/races_driver, length = 0.1)) %>% 
   ggplot() +
@@ -507,7 +507,7 @@ data_features %>%
   labs(x = "Races Won %age", y = "Race Position") +
   theme_vaw_light()
 
-# Podium Win Ratio
+# Podium Win Ratio Driver -----------------------------------------------
 data_features %>% 
   mutate(ratio_race_podiums_driver = cut_interval(x = podiums_driver/races_driver, length = 0.1)) %>% 
   ggplot() +
@@ -516,7 +516,7 @@ data_features %>%
   labs(x = "Podiums Achieved %age", y = "Race Position") +
   theme_vaw_light()
 
-# Mean race position Driver
+# Mean race position Driver -----------------------------------------------
 data_features %>% 
   mutate(position_mean_driver = factor(round(position_mean_driver), levels = 1:20)) %>% 
   ggplot() +
@@ -525,7 +525,7 @@ data_features %>%
   labs(x = "Mean Race Position", y = "Race Position") +
   theme_vaw_light()
 
-# Mean Grid Position Driver
+# Mean Grid Position Driver ----------------------------------------------
 data_features %>% 
   mutate(grid_mean_driver = factor(round(grid_mean_driver), levels = 1:20)) %>% 
   ggplot() +
@@ -534,7 +534,16 @@ data_features %>%
   labs(x = "Mean Grid Position", y = "Race Position") +
   theme_vaw_light()
 
-# Mean DNFs
+# Mean DNFs -----------------------------------------------------------
+data_features %>% 
+  mutate(dnf_mean_driver = cut_interval(x = dnf_mean_driver, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = dnf_mean_driver, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs(x = "DNF %age Driver", y = "Race Position") +
+  theme_vaw_light()
+
+# Points Share Last 5 Driver -----------------------------------------
 
 ```
 
