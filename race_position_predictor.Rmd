@@ -431,8 +431,8 @@ difftime(time1 = Sys.time(), time2 = t0)
 ```
 
 ## Explore
-```{r EDA}
-# Relations of most variables to race position
+### Univariate Analysis - Violins
+```{r Univariate Violins}
 # Age Driver -----------------------------------------------
 data_features %>% 
   mutate(age_driver = cut_interval(x = age_driver, length = 2)) %>% 
@@ -474,15 +474,7 @@ data_features %>%
 
 # Races Featured Driver -----------------------------------------------
 data_features %>% 
-  mutate(race_position = factor(race_position, levels = 1:20)) %>% 
-  ggplot() +
-  geom_violin(mapping = aes(x = race_position, y = races_driver),
-              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
-  labs(x = "Race Position", y = "Races Driver") +
-  theme_vaw_light()
-
-data_features %>% 
-  mutate(races_driver = cut_interval(x = races_driver, length = 50)) %>% 
+  mutate(races_driver = cut_interval(x = races_driver, length = 25)) %>% 
   ggplot() +
   geom_violin(mapping = aes(x = races_driver, y = race_position),
               draw_quantiles = c(0.25, 0.5, 0.75)) +
@@ -494,7 +486,7 @@ data_features %>%
   mutate(ratio_points_driver = cut_interval(x = ratio_points_driver, length = 0.1)) %>% 
   ggplot() +
   geom_violin(mapping = aes(x = ratio_points_driver, y = race_position),
-              draw_quantiles = c(0.25, 0.5, 0.75)) +
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
   labs(x = "Points Won %age Driver", y = "Race Position") +
   theme_vaw_light()
 
@@ -880,6 +872,19 @@ data_features %>%
   labs(x = "DNFs L5 Constructor Circuit", y = "Race Position") +
   theme_vaw_light()
 
+
+
+```
+
+### Simple Linear Regressions
+```{r}
+# Qualification Position Driver -----------------------------------------------
+data_features %>% 
+  ggplot() +
+  geom_smooth(mapping = aes(x = quali_position, y = race_position), )
+  scale_fill_viridis_b(trans = "log10", guide = FALSE) +
+  labs(x = "Qualification Position", y = "Race Position") +
+  theme_vaw_light()
 
 ```
 

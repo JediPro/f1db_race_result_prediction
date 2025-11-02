@@ -2,7 +2,6 @@ Readme init
 
 # Features to use
 grid_position
-age_driver
 races_driver
 ratio_points_driver
 ratio_wins_driver
