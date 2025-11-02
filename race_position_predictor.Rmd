@@ -25,7 +25,7 @@ setwd("C:\\Stuff\\Datasets\\formula_one\\f1_data\\race_position_predictor\\")
 
 # Load themes script
 source(file = "C:\\Stuff\\Datasets\\vaw_themes.R")
-```
+``` 
 
 ## Load data
 ```{r Load data}
@@ -878,13 +878,26 @@ data_features %>%
 
 ### Simple Linear Regressions
 ```{r}
+library(jtools)
 # Qualification Position Driver -----------------------------------------------
-data_features %>% 
-  ggplot() +
-  geom_smooth(mapping = aes(x = quali_position, y = race_position), )
-  scale_fill_viridis_b(trans = "log10", guide = FALSE) +
-  labs(x = "Qualification Position", y = "Race Position") +
-  theme_vaw_light()
+lm(formula = race_position ~ quali_position, 
+   data = data_features %>% filter(races_driver > 5)) %>% summ()
+
+# Grid Position Driver -----------------------------------------------
+lm(formula = race_position ~ grid_position, 
+   data = data_features %>% filter(races_driver > 5)) %>% summ()
+
+# Age Driver -----------------------------------------------
+lm(formula = race_position ~ age_driver, 
+   data = data_features %>% filter(races_driver > 5)) %>% summ()
+
+# Races Driver -----------------------------------------------
+lm(formula = race_position ~ races_driver, 
+   data = data_features %>% filter(races_driver > 5)) %>% summ()
+
+# Points Ratio Driver ------------------------------
+lm(formula = race_position ~ ratio_points_driver, 
+   data = data_features %>% filter(races_driver > 5)) %>% summ()
 
 ```
 

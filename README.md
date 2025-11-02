@@ -1,6 +1,6 @@
 Readme init
 
-# Features to use
+# Features selected from Univariate Analysis
 grid_position
 races_driver
 ratio_points_driver
@@ -37,3 +37,5 @@ ratio_podiums_constructor_circuit
 position_mean_constructor_circuit
 grid_mean_constructor_circuit
 dnf_mean_constructor_circuit
+
+# Features to use from simple linear regression
