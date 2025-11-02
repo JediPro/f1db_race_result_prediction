@@ -9,7 +9,6 @@ ratio_wins_driver
 ratio_podiums_driver
 position_mean_driver
 grid_mean_driver
-dnf_mean_driver
 ratio_points_l5_driver
 position_l5_driver
 grid_l5_driver
@@ -24,3 +23,18 @@ ratio_points_l5_constructor
 position_l5_constructor
 grid_l5_constructor
 dnf_l5_constructor
+races_driver_circuit
+ratio_points_driver_circuit
+ratio_wins_driver_circuit
+ratio_podiums_driver_circuit
+position_mean_driver_circuit
+grid_mean_driver_circuit
+ratio_points_l5_driver_circuit
+position_l5_driver_circuit
+grid_l5_driver_circuit
+races_constructor_circuit
+ratio_points_constructor_circuit
+ratio_podiums_constructor_circuit
+position_mean_constructor_circuit
+grid_mean_constructor_circuit
+dnf_mean_constructor_circuit

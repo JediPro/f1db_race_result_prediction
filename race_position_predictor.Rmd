@@ -236,7 +236,7 @@ data_features <- data_proc %>%
                                  .f = ~sum(.x, na.rm = TRUE), 
                                  .before = Inf, .after = -1),
          # Cumulative podiums
-         podiums_constructor = slide_index_dbl(.x = case_when(race_position <= 3 ~ 1, TRUE ~ 0),
+         podiums_constructor = slide_index_dbl(.x = case_when(constr_driver_index == 1 & race_position <= 3 ~ 1, TRUE ~ 0),
                                                .i = races_constructor,
                                     .f = ~sum(.x, na.rm = TRUE), 
                                     .before = Inf, .after = -1),
@@ -367,7 +367,7 @@ data_features <- data_proc %>%
                                  .f = ~sum(.x, na.rm = TRUE), 
                                  .before = Inf, .after = -1),
          # Cumulative podiums
-         podiums_constructor_circuit = slide_index_dbl(.x = case_when(race_position <= 3 ~ 1, TRUE ~ 0),
+         podiums_constructor_circuit = slide_index_dbl(.x = case_when(constr_driver_index == 1 & race_position <= 3 ~ 1, TRUE ~ 0),
                                                .i = races_constructor,
                                     .f = ~sum(.x, na.rm = TRUE), 
                                     .before = Inf, .after = -1),
@@ -495,7 +495,7 @@ data_features %>%
   ggplot() +
   geom_violin(mapping = aes(x = ratio_points_driver, y = race_position),
               draw_quantiles = c(0.25, 0.5, 0.75)) +
-  labs(x = "Points Won %age", y = "Race Position") +
+  labs(x = "Points Won %age Driver", y = "Race Position") +
   theme_vaw_light()
 
 # Race win Ratio Driver -----------------------------------------------
@@ -504,7 +504,7 @@ data_features %>%
   ggplot() +
   geom_violin(mapping = aes(x = ratio_race_wins_driver, y = race_position),
               draw_quantiles = c(0.25, 0.5, 0.75)) +
-  labs(x = "Races Won %age", y = "Race Position") +
+  labs(x = "Races Won %age Driver", y = "Race Position") +
   theme_vaw_light()
 
 # Podium Win Ratio Driver -----------------------------------------------
@@ -513,7 +513,7 @@ data_features %>%
   ggplot() +
   geom_violin(mapping = aes(x = ratio_race_podiums_driver, y = race_position),
               draw_quantiles = c(0.25, 0.5, 0.75)) +
-  labs(x = "Podiums Achieved %age", y = "Race Position") +
+  labs(x = "Podiums Achieved %age Driver", y = "Race Position") +
   theme_vaw_light()
 
 # Mean race position Driver -----------------------------------------------
@@ -539,7 +539,7 @@ data_features %>%
   mutate(dnf_mean_driver = cut_interval(x = dnf_mean_driver, length = 0.1)) %>% 
   ggplot() +
   geom_violin(mapping = aes(x = dnf_mean_driver, y = race_position),
-              draw_quantiles = c(0.25, 0.5, 0.75)) +
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
   labs(x = "DNF %age Driver", y = "Race Position") +
   theme_vaw_light()
 
@@ -607,12 +607,12 @@ data_features %>%
   labs(x = "Races Won %age Constructor", y = "Race Position") +
   theme_vaw_light()
 
-# Podium Win Ratio Constructor -----------------------------------------------
+# Podium Ratio Constructor -----------------------------------------------
 data_features %>% 
-  mutate(ratio_race_podiums_constructor = cut_interval(x = podiums_constructor/races_constructor, length = 0.2)) %>% 
+  mutate(ratio_race_podiums_constructor = cut_interval(x = podiums_constructor/races_constructor, length = 0.1)) %>% 
   ggplot() +
   geom_violin(mapping = aes(x = ratio_race_podiums_constructor, y = race_position),
-              draw_quantiles = c(0.25, 0.5, 0.75)) +
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
   labs(x = "Podiums Achieved %age Constructor", y = "Race Position") +
   theme_vaw_light()
 
@@ -677,6 +677,207 @@ data_features %>%
   geom_violin(mapping = aes(x = dnf_l5_constructor, y = race_position),
               draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
   labs(x = "DNFs L5 Constructor", y = "Race Position") +
+  theme_vaw_light()
+
+
+# Races Featured Driver Circuit -----------------------------------------------
+data_features %>% 
+  mutate(races_driver_circuit = cut_interval(x = races_driver_circuit, length = 3)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = races_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Races Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Points Share Driver -----------------------------------------------
+data_features %>% 
+  mutate(ratio_points_driver_circuit = cut_interval(x = ratio_points_driver_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_points_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Points Won %age Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Race win Ratio Driver -----------------------------------------------
+data_features %>% 
+  mutate(ratio_wins_driver_circuit = cut_interval(x = wins_driver_circuit/races_driver_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_wins_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Races Won %age Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Podium Win Ratio Driver -----------------------------------------------
+data_features %>% 
+  mutate(ratio_podiums_driver_circuit = cut_interval(x = podiums_driver_circuit/races_driver_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_podiums_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Podiums Achieved %age Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean race position Driver -----------------------------------------------
+data_features %>% 
+  mutate(position_mean_driver_circuit = factor(round(position_mean_driver_circuit), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = position_mean_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Race Position Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Grid Position Driver ----------------------------------------------
+data_features %>% 
+  mutate(grid_mean_driver_circuit = factor(round(grid_mean_driver_circuit), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = grid_mean_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Grid Position Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean DNFs Driver -----------------------------------------------------------
+data_features %>% 
+  mutate(dnf_mean_driver_circuit = cut_interval(x = dnf_mean_driver_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = dnf_mean_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "DNF %age Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Points Share Last 5 Driver -----------------------------------------
+data_features %>% 
+  mutate(ratio_points_l5_driver_circuit = cut_interval(x = ratio_points_l5_driver_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_points_l5_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Points Won Last 5 %age Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Race Position Last 5 Driver --------------------------------------
+data_features %>% 
+  mutate(position_l5_driver_circuit = factor(round(position_l5_driver_circuit), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = position_l5_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Race Position L5 Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Grid Position Last 5 Driver --------------------------------------------
+data_features %>% 
+  mutate(grid_l5_driver_circuit = factor(round(grid_l5_driver_circuit), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = grid_l5_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Grid Position L5 Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Count DNF Last 5 Driver ---------------------------------------------------
+data_features %>% 
+  mutate(dnf_l5_driver_circuit = factor(round(dnf_l5_driver_circuit), levels = 1:5)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = dnf_l5_driver_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "DNFs L5 Driver Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+
+# Races Featured Constructor Circuit -----------------------------------------------
+data_features %>% 
+  mutate(races_constructor_circuit = cut_interval(x = races_constructor_circuit, length = 10)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = races_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Races Contructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Points Share Constructor Circuit -----------------------------------------------
+data_features %>% 
+  mutate(ratio_points_constructor_circuit = cut_interval(x = ratio_points_constructor_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_points_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Points Won %age Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Race win Ratio Constructor Circuit -----------------------------------------------
+data_features %>% 
+  mutate(ratio_wins_constructor_circuit = cut_interval(x = wins_constructor_circuit/races_constructor_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_wins_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Races Won %age Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Podium Win Ratio Constructor Circuit -----------------------------------------------
+data_features %>% 
+  mutate(ratio_podiums_constructor_circuit = cut_interval(x = podiums_constructor_circuit/races_constructor_circuit, 
+                                                               length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_podiums_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Podiums Achieved %age Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean race position Constructor Circuit -----------------------------------------------
+data_features %>% 
+  mutate(position_mean_constructor_circuit = factor(round(position_mean_constructor_circuit), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = position_mean_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Race Position Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Grid Position Constructor Circuit ----------------------------------------------
+data_features %>% 
+  mutate(grid_mean_constructor_circuit = factor(round(grid_mean_constructor_circuit), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = grid_mean_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Grid Position Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean DNFs Constructor Circuit -----------------------------------------------------------
+data_features %>% 
+  mutate(dnf_mean_constructor_circuit = cut_interval(x = dnf_mean_constructor_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = dnf_mean_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "DNF %age Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Points Share Last 5 Constructor Circuit -----------------------------------------
+data_features %>% 
+  mutate(ratio_points_l5_constructor_circuit = cut_interval(x = ratio_points_l5_constructor_circuit, length = 0.1)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = ratio_points_l5_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Points Won Last 5 %age Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Race Position Last 5 Constructor Circuit --------------------------------------
+data_features %>% 
+  mutate(position_l5_constructor_circuit = factor(round(position_l5_constructor_circuit), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = position_l5_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Race Position L5 Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Mean Grid Position Last 5 Constructor Circuit --------------------------------------------
+data_features %>% 
+  mutate(grid_l5_constructor_circuit = factor(round(grid_l5_constructor_circuit), levels = 1:20)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = grid_l5_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "Mean Grid Position L5 Constructor Circuit", y = "Race Position") +
+  theme_vaw_light()
+
+# Count DNF Last 5 Constructor Circuit ---------------------------------------------------
+data_features %>% 
+  mutate(dnf_l5_constructor_circuit = factor(round(dnf_l5_constructor_circuit), levels = 1:5)) %>% 
+  ggplot() +
+  geom_violin(mapping = aes(x = dnf_l5_constructor_circuit, y = race_position),
+              draw_quantiles = c(0.25, 0.5, 0.75), scale = "width") +
+  labs(x = "DNFs L5 Constructor Circuit", y = "Race Position") +
   theme_vaw_light()
 
 
